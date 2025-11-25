@@ -1,0 +1,27 @@
+providers:
+    - Spatie\LaravelRay\RayServiceProvider
+    - Spatie\LaravelData\LaravelDataServiceProvider
+    - JayI\Stretch\StretchServiceProvider
+env:
+    - RAY_ENABLED=(true)
+    - SEND_CACHE_TO_RAY=(false)
+    - SEND_DUMPS_TO_RAY=(true)
+    - SEND_JOBS_TO_RAY=(false)
+    - SEND_LOG_CALLS_TO_RAY=(true)
+    - SEND_QUERIES_TO_RAY=(false)
+    - SEND_REQUESTS_TO_RAY=(false)
+    - SEND_VIEWS_TO_RAY=(false)
+    - SEND_EXCEPTIONS_TO_RAY=(true)
+    - DB_CONNECTION="testing"
+    - ELASTICSEARCH_CLOUD_ID=
+    - ELASTICSEARCH_API_KEY=
+migrations:
+    - tests/database/migrations
+workbench:
+    install: false
+    discovers:
+        web: false
+        api: false
+        commands: false
+        views: false
+        config: true

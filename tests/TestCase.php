@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JayI\Stretch\Tests;
+
+use Orchestra\Testbench\Concerns\WithWorkbench;
+use Orchestra\Testbench\TestCase as Orchestra;
+
+class TestCase extends Orchestra
+{
+    use WithWorkbench;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+    }
+}
