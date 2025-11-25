@@ -34,18 +34,18 @@ ELASTICSEARCH_PASSWORD=your_password
 use JayI\Stretch\Facades\Stretch;
 
 // Simple match query
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->match('title', 'Laravel')
     ->execute();
 
 // Term query
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->term('status', 'published')
     ->size(10)
     ->execute();
 
 // Range query
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->range('created_at')
         ->gte('2024-01-01')
         ->lte('2024-12-31')
@@ -56,7 +56,7 @@ $results = Stretch::query()
 
 ```php
 // Complex bool query
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->bool(function ($bool) {
         $bool->must([
             fn($q) => $q->match('title', 'Laravel'),
@@ -73,7 +73,7 @@ $results = Stretch::query()
 
 ```php
 // Terms aggregation
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->match('content', 'elasticsearch')
     ->aggregation('categories', fn($agg) => 
         $agg->terms('category.keyword')->size(10)
@@ -81,7 +81,7 @@ $results = Stretch::query()
     ->execute();
 
 // Date histogram with sub-aggregations
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->aggregation('monthly_stats', fn($agg) =>
         $agg->dateHistogram('created_at', 'month')
             ->subAggregation('avg_score', fn($sub) => $sub->avg('score'))
@@ -93,7 +93,7 @@ $results = Stretch::query()
 ### Sorting and Pagination
 
 ```php
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->match('title', 'Laravel')
     ->sort('created_at', 'desc')
     ->sort('_score', 'desc')
@@ -105,7 +105,7 @@ $results = Stretch::query()
 ### Source Filtering
 
 ```php
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->match('title', 'Laravel')
     ->source(['title', 'content', 'created_at'])
     ->execute();
@@ -114,7 +114,7 @@ $results = Stretch::query()
 ### Highlighting
 
 ```php
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->match('content', 'elasticsearch')
     ->highlight([
         'content' => new \stdClass()
@@ -130,7 +130,7 @@ $results = Stretch::query()
 ### Nested Queries
 
 ```php
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->nested('comments', function ($nested) {
         $nested->bool(function ($bool) {
             $bool->must(fn($q) => $q->match('comments.message', 'great'));
@@ -144,12 +144,12 @@ $results = Stretch::query()
 
 ```php
 // Wildcard query
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->wildcard('title', 'Larave*')
     ->execute();
 
 // Fuzzy query
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->fuzzy('title', 'Laravl', ['fuzziness' => 'AUTO'])
     ->execute();
 ```
@@ -157,7 +157,7 @@ $results = Stretch::query()
 ### Multiple Query Types
 
 ```php
-$results = Stretch::query()
+$results = Stretch::index(['index_1', 'index_2'])
     ->bool(function ($bool) {
         $bool->must(fn($q) => $q->match('title', 'Laravel'));
         $bool->should([
@@ -232,7 +232,7 @@ $result = Stretch::bulk($operations);
 
 ```php
 // Get the raw query array
-$query = Stretch::query()
+$query = Stretch::index(['index_1', 'index_2'])
     ->match('title', 'Laravel')
     ->bool(function ($bool) {
         $bool->filter(fn($q) => $q->term('status', 'published'));
