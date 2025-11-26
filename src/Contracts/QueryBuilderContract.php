@@ -4,10 +4,20 @@ declare(strict_types=1);
 
 namespace JayI\Stretch\Contracts;
 
+/**
+ * Contract for Elasticsearch query builders.
+ *
+ * Defines the fluent interface for building and executing Elasticsearch queries.
+ * Implementations provide methods for various query types, aggregations,
+ * sorting, pagination, and result filtering.
+ */
 interface QueryBuilderContract
 {
     /**
-     * Set the index to search
+     * Set the index or indices to search.
+     *
+     * @param  string|array  $index  Single index name or array of index names
+     * @return static Returns the builder instance for method chaining
      */
     public function index(string|array $index): static;
 
@@ -26,102 +36,189 @@ interface QueryBuilderContract
     public function connection(string $name): static;
 
     /**
-     * Add a match query
+     * Add a match query for full-text search.
+     *
+     * @param  string  $field  The field to search
+     * @param  mixed  $value  The search text
+     * @param  array  $options  Additional options (fuzziness, operator, etc.)
+     * @return static Returns the builder instance for method chaining
      */
     public function match(string $field, mixed $value, array $options = []): static;
 
     /**
-     * Add a match phrase query
+     * Add a match phrase query for exact phrase matching.
+     *
+     * @param  string  $field  The field to search
+     * @param  mixed  $value  The exact phrase to match
+     * @param  array  $options  Additional options (slop, etc.)
+     * @return static Returns the builder instance for method chaining
      */
     public function matchPhrase(string $field, mixed $value, array $options = []): static;
 
     /**
-     * Add a term query
+     * Add a term query for exact value matching.
+     *
+     * @param  string  $field  The field to search (use .keyword for text fields)
+     * @param  mixed  $value  The exact value to match
+     * @return static Returns the builder instance for method chaining
      */
     public function term(string $field, mixed $value): static;
 
     /**
-     * Add a terms query
+     * Add a terms query for matching any of multiple values.
+     *
+     * @param  string  $field  The field to search
+     * @param  array  $values  Array of values to match against
+     * @return static Returns the builder instance for method chaining
      */
     public function terms(string $field, array $values): static;
 
     /**
-     * Add a range query
+     * Start building a range query for numeric or date fields.
+     *
+     * @param  string  $field  The field to apply the range query to
+     * @return RangeQueryBuilderContract The range query builder for chaining
      */
     public function range(string $field): RangeQueryBuilderContract;
 
     /**
-     * Add a bool query
+     * Create a bool query with must/should/filter/mustNot clauses.
+     *
+     * @param  callable|null  $callback  Optional callback receiving the BoolQueryBuilder
+     * @return BoolQueryBuilderContract The bool query builder
      */
     public function bool(?callable $callback = null): BoolQueryBuilderContract;
 
     /**
-     * Add a nested query
+     * Add a nested query for searching nested objects.
+     *
+     * @param  string  $path  The path to the nested object field
+     * @param  callable  $callback  Callback receiving a query builder for the nested query
+     * @return static Returns the builder instance for method chaining
      */
     public function nested(string $path, callable $callback): static;
 
     /**
-     * Add a wildcard query
+     * Add a wildcard query for pattern matching.
+     *
+     * @param  string  $field  The field to search
+     * @param  string  $value  The wildcard pattern (* and ? supported)
+     * @return static Returns the builder instance for method chaining
      */
     public function wildcard(string $field, string $value): static;
 
     /**
-     * Add a fuzzy query
+     * Add a fuzzy query for approximate string matching.
+     *
+     * @param  string  $field  The field to search
+     * @param  mixed  $value  The search term
+     * @param  array  $options  Options like fuzziness, prefix_length, max_expansions
+     * @return static Returns the builder instance for method chaining
      */
     public function fuzzy(string $field, mixed $value, array $options = []): static;
 
     /**
-     * Add an exists query
+     * Add an exists query to find documents with a field value.
+     *
+     * @param  string  $field  The field that must exist
+     * @return static Returns the builder instance for method chaining
      */
     public function exists(string $field): static;
 
     /**
-     * Set the size (limit) of results
+     * Set the maximum number of results to return.
+     *
+     * @param  int  $size  Maximum number of hits to return
+     * @return static Returns the builder instance for method chaining
      */
     public function size(int $size): static;
 
     /**
-     * Set the from (offset) for pagination
+     * Set the offset for pagination.
+     *
+     * @param  int  $from  Number of results to skip
+     * @return static Returns the builder instance for method chaining
      */
     public function from(int $from): static;
 
     /**
-     * Add sorting
+     * Add a sort clause to order results.
+     *
+     * @param  string|array  $field  Field name or full sort configuration array
+     * @param  string  $direction  Sort direction: 'asc' or 'desc'
+     * @return static Returns the builder instance for method chaining
      */
     public function sort(string|array $field, string $direction = 'asc'): static;
 
     /**
-     * Add source filtering
+     * Configure source field filtering in results.
+     *
+     * @param  array|string|bool  $source  Fields to include, or false to exclude all
+     * @return static Returns the builder instance for method chaining
      */
     public function source(array|string|bool $source): static;
 
     /**
-     * Add highlighting
+     * Enable highlighting for specified fields.
+     *
+     * @param  array  $fields  Fields to highlight with their options
+     * @param  array  $options  Global highlight options (pre_tags, post_tags, etc.)
+     * @return static Returns the builder instance for method chaining
      */
     public function highlight(array $fields, array $options = []): static;
 
     /**
-     * Add an aggregation
+     * Add a named aggregation to the query.
+     *
+     * @param  string  $name  Name for this aggregation in the response
+     * @param  callable  $callback  Callback receiving an AggregationBuilder
+     * @return static Returns the builder instance for method chaining
      */
     public function aggregation(string $name, callable $callback): static;
 
     /**
-     * Add a filter context query
+     * Add a filter context clause (no scoring, cached).
+     *
+     * @param  callable  $callback  Callback receiving a query builder for the filter
+     * @return static Returns the builder instance for method chaining
      */
     public function filter(callable $callback): static;
 
     /**
-     * Build the final query array
+     * Build the final Elasticsearch query array.
+     *
+     * @return array The complete Elasticsearch query body
      */
     public function build(): array;
 
     /**
-     * Execute the query and return results
+     * Execute the query and return results.
+     *
+     * @return array The Elasticsearch search response
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If the search fails
      */
     public function execute(): array;
 
     /**
-     * Get the raw query array for debugging
+     * Get the raw query array for debugging.
+     *
+     * @return array The complete Elasticsearch query body
      */
     public function toArray(): array;
+
+    /**
+     * Add a raw query clause to the builder.
+     *
+     * @param  array  $query  The query clause to add
+     */
+    public function addQuery(array $query): void;
+
+    /**
+     * Update an existing range query for a specific field.
+     *
+     * @param  string  $field  The field name of the range query to update
+     * @param  array  $rangeQuery  The updated range query
+     */
+    public function updateLastRangeQuery(string $field, array $rangeQuery): void;
 }

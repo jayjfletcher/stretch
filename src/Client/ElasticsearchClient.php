@@ -6,18 +6,35 @@ namespace JayI\Stretch\Client;
 
 use Elastic\Elasticsearch\Client;
 use Exception;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Cache;
 use JayI\Stretch\Contracts\ClientContract;
 use JayI\Stretch\Exceptions\StretchException;
 
+/**
+ * Wrapper around the official Elasticsearch PHP client.
+ *
+ * Provides a consistent interface for all Elasticsearch operations with
+ * automatic error handling, query logging, and slow query detection.
+ * All native client exceptions are wrapped in StretchException.
+ */
 class ElasticsearchClient implements ClientContract
 {
-
+    /**
+     * Create a new ElasticsearchClient instance.
+     *
+     * @param  Client  $client  The native Elasticsearch client
+     */
     public function __construct(
         protected Client $client
     ) {}
 
+    /**
+     * Execute a search query.
+     *
+     * @param  array  $params  Search parameters including index and body
+     * @return array The search response as an array
+     *
+     * @throws StretchException If the search operation fails
+     */
     public function search(array $params): array
     {
         try {
@@ -26,12 +43,21 @@ class ElasticsearchClient implements ClientContract
             $response = $this->client->search($params)->asArray();
 
             $this->logSlowQuery($params, $response);
+
             return $response;
         } catch (Exception $exception) {
             throw new StretchException("Search failed: {$exception->getMessage()}", 0, $exception);
         }
     }
 
+    /**
+     * Index (create or update) a document.
+     *
+     * @param  array  $params  Index parameters including index, id, and body
+     * @return array The index response as an array
+     *
+     * @throws StretchException If the index operation fails
+     */
     public function index(array $params): array
     {
         try {
@@ -41,6 +67,14 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Update a document.
+     *
+     * @param  array  $params  Update parameters including index, id, and body
+     * @return array The update response as an array
+     *
+     * @throws StretchException If the update operation fails
+     */
     public function update(array $params): array
     {
         try {
@@ -50,6 +84,14 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Delete a document.
+     *
+     * @param  array  $params  Delete parameters including index and id
+     * @return array The delete response as an array
+     *
+     * @throws StretchException If the delete operation fails
+     */
     public function delete(array $params): array
     {
         try {
@@ -59,6 +101,14 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Execute bulk operations.
+     *
+     * @param  array  $params  Bulk parameters with body containing operations
+     * @return array The bulk response as an array
+     *
+     * @throws StretchException If the bulk operation fails
+     */
     public function bulk(array $params): array
     {
         try {
@@ -68,6 +118,13 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Get all indices.
+     *
+     * @return array Array of index information
+     *
+     * @throws StretchException If retrieving indices fails
+     */
     public function indices(): array
     {
         try {
@@ -77,6 +134,12 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Check if an index exists.
+     *
+     * @param  string  $index  The index name to check
+     * @return bool True if the index exists, false otherwise
+     */
     public function indexExists(string $index): bool
     {
         try {
@@ -86,6 +149,15 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Create a new index.
+     *
+     * @param  string  $index  The index name to create
+     * @param  array  $settings  Optional index settings and mappings
+     * @return array The create index response
+     *
+     * @throws StretchException If index creation fails
+     */
     public function createIndex(string $index, array $settings = []): array
     {
         try {
@@ -100,6 +172,14 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Delete an index.
+     *
+     * @param  string  $index  The index name to delete
+     * @return array The delete index response
+     *
+     * @throws StretchException If index deletion fails
+     */
     public function deleteIndex(string $index): array
     {
         try {
@@ -109,6 +189,13 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Get cluster health information.
+     *
+     * @return array The cluster health response
+     *
+     * @throws StretchException If retrieving health fails
+     */
     public function health(): array
     {
         try {
@@ -118,6 +205,14 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Get a document by ID.
+     *
+     * @param  array  $params  Get parameters including index and id
+     * @return array The document as an array
+     *
+     * @throws StretchException If the get operation fails
+     */
     public function get(array $params): array
     {
         try {
@@ -127,6 +222,14 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Execute multiple search queries in a single request.
+     *
+     * @param  array  $params  Multi-search parameters with body
+     * @return array The multi-search response with 'responses' array
+     *
+     * @throws StretchException If the multi-search operation fails
+     */
     public function msearch(array $params): array
     {
         try {
@@ -142,28 +245,48 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    /**
+     * Log a query if query logging is enabled.
+     *
+     * @param  array  $query  The query to log
+     */
     protected function logQuery(array $query): void
     {
-        if(config('stretch.logging.log_queries')){
-            $this->log('Elasticsearch query:',$query);
+        if (config('stretch.logging.log_queries')) {
+            $this->log('Elasticsearch query:', $query);
         }
     }
 
-    protected function logSlowQuery(array $query, $response): void
+    /**
+     * Log a slow query if slow query logging is enabled.
+     *
+     * Checks if the query execution time exceeds the configured threshold
+     * and logs it as a warning if so.
+     *
+     * @param  array  $query  The query that was executed
+     * @param  array  $response  The response containing 'took' time
+     */
+    protected function logSlowQuery(array $query, array $response): void
     {
-        if(config('stretch.logging.log_slow_queries')){
+        if (config('stretch.logging.log_slow_queries')) {
             $time = $response['took'] ?? 0;
-            if($time > config('stretch.logging.slow_query_threshold')){
-                $this->log('Slow Elasticsearch query:',$query, 'warning');
+            if ($time > config('stretch.logging.slow_query_threshold')) {
+                $this->log('Slow Elasticsearch query:', $query, 'warning');
             }
         }
     }
 
-    protected function log(string $message, array $context = [], $level = 'info'): void
+    /**
+     * Log a message if logging is enabled.
+     *
+     * @param  string  $message  The log message
+     * @param  array  $context  Additional context data
+     * @param  string  $level  The log level (info, warning, error, etc.)
+     */
+    protected function log(string $message, array $context = [], string $level = 'info'): void
     {
-        if(config('stretch.logging.enabled')) {
+        if (config('stretch.logging.enabled')) {
             logger()->{$level}($message, $context);
         }
     }
-
 }

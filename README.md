@@ -149,6 +149,80 @@ $results = Stretch::index(['index_1', 'index_2'])
 
 ```
 
+### Caching
+
+Stretch supports query result caching using Laravel's cache system with flexible TTL (stale-while-revalidate pattern):
+
+```php
+// Enable caching for a query
+$results = Stretch::index('posts')
+    ->match('title', 'Laravel')
+    ->cache()
+    ->execute();
+
+// Configure cache TTL (uses Laravel's flexible caching)
+// First value: fresh period, Second value: stale period
+$results = Stretch::index('posts')
+    ->match('title', 'Laravel')
+    ->cache()
+    ->setCacheTtl([300, 600]) // Fresh for 5 min, stale for 10 min
+    ->execute();
+
+// Use a custom cache prefix
+$results = Stretch::index('posts')
+    ->match('title', 'Laravel')
+    ->cache()
+    ->setCachePrefix('search:')
+    ->execute();
+
+// Use a specific cache driver
+$results = Stretch::index('posts')
+    ->match('title', 'Laravel')
+    ->cache()
+    ->setCacheDriver('redis')
+    ->execute();
+
+// Clear cache before executing (force fresh results)
+$results = Stretch::index('posts')
+    ->match('title', 'Laravel')
+    ->cache()
+    ->clearCache()
+    ->execute();
+
+// Full example with all options
+$results = Stretch::index('posts')
+    ->match('title', 'Laravel')
+    ->term('status', 'published')
+    ->cache()
+    ->setCacheTtl([600, 1200])
+    ->setCachePrefix('es:posts:')
+    ->setCacheDriver('redis')
+    ->execute();
+```
+
+Cache keys are automatically generated based on the query structure and index name, ensuring different queries produce different cache entries.
+
+Caching also works with multi-queries:
+
+```php
+$results = Stretch::multi()
+    ->add('posts', fn ($q) => $q->match('title', 'Laravel'))
+    ->add('users', fn ($q) => $q->term('status', 'active'))
+    ->cache()
+    ->setCacheTtl([300, 600])
+    ->execute();
+```
+
+Configure default cache settings in `config/stretch.php`:
+
+```php
+'cache' => [
+    'driver' => 'default',  // Cache driver to use
+    'prefix' => '',         // Prefix for all cache keys
+    'ttl' => [300, 600],    // Default TTL [fresh, stale]
+],
+```
+
 ### Nested Queries
 
 ```php

@@ -18,29 +18,77 @@ use JayI\Stretch\ElasticsearchManager;
  * This class implements the QueryBuilderContract and provides methods for building
  * complex Elasticsearch queries with support for multiple query types, aggregations,
  * sorting, pagination, and multi-connection support.
+ *
+ * @phpstan-consistent-constructor
  */
 class ElasticsearchQueryBuilder implements QueryBuilderContract
 {
     use IsCacheable;
 
+    /**
+     * Query clauses to be combined in the final query.
+     *
+     * @var array<int, array>
+     */
     protected array $query = [];
 
+    /**
+     * Named aggregations to include in the query.
+     *
+     * @var array<string, array>
+     */
     protected array $aggregations = [];
 
+    /**
+     * Sort clauses for result ordering.
+     *
+     * @var array<int, array>
+     */
     protected array $sort = [];
 
+    /**
+     * Source filtering configuration (_source field).
+     *
+     * Can be:
+     * - array: List of fields to include/exclude
+     * - string: Single field to include
+     * - bool: false to exclude all source fields
+     * - null: Include all source fields (default)
+     */
     protected array|string|bool|null $source = null;
 
+    /**
+     * Highlighting configuration for search results.
+     *
+     * @var array
+     */
     protected array $highlight = [];
 
+    /**
+     * Index or indices to search.
+     */
     protected string|array|null $index = null;
 
+    /**
+     * Maximum number of results to return.
+     */
     protected ?int $size = null;
 
+    /**
+     * Offset for pagination (number of results to skip).
+     */
     protected ?int $from = null;
 
+    /**
+     * Filter context clauses (no scoring, cached).
+     *
+     * @var array<int, array>
+     */
     protected array $filters = [];
 
+    /**
+     * Whether query caching is enabled.
+     */
     protected bool $cache = false;
 
     /**
@@ -54,6 +102,21 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         protected ?ElasticsearchManager $manager = null
     ) {}
 
+    /**
+     * Set the index or indices to search.
+     *
+     * @param  string|array  $index  Single index name or array of index names
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * // Single index
+     * $builder->index('posts');
+     *
+     * // Multiple indices
+     * $builder->index(['posts', 'comments', 'users']);
+     * ```
+     */
     public function index(string|array $index): static
     {
         $this->index = $index;
@@ -88,9 +151,29 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
 
         $client = new ElasticsearchClient($this->manager->connection($name));
 
-        return new self($client, $this->manager);
+        return new static($client, $this->manager);
     }
 
+    /**
+     * Add a match query for full-text search.
+     *
+     * Analyzes the input text and constructs a query from the terms.
+     * Best for searching analyzed text fields like descriptions or content.
+     *
+     * @param  string  $field  The field to search
+     * @param  mixed  $value  The search text
+     * @param  array  $options  Additional options (fuzziness, operator, etc.)
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * // Simple match
+     * $builder->match('title', 'Laravel Elasticsearch');
+     *
+     * // With options
+     * $builder->match('title', 'Laravel', ['fuzziness' => 'AUTO', 'operator' => 'and']);
+     * ```
+     */
     public function match(string $field, mixed $value, array $options = []): static
     {
         $match = array_merge(['query' => $value], $options);
@@ -104,6 +187,22 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a match phrase query for exact phrase matching.
+     *
+     * Matches documents containing the exact phrase in order.
+     * Useful for searching for specific phrases or sentences.
+     *
+     * @param  string  $field  The field to search
+     * @param  mixed  $value  The exact phrase to match
+     * @param  array  $options  Additional options (slop for word distance, etc.)
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->matchPhrase('content', 'quick brown fox');
+     * ```
+     */
     public function matchPhrase(string $field, mixed $value, array $options = []): static
     {
         $match = array_merge(['query' => $value], $options);
@@ -117,6 +216,22 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a term query for exact value matching.
+     *
+     * Finds documents with the exact term in the specified field.
+     * Use for keyword fields, IDs, or exact matches (not analyzed text).
+     *
+     * @param  string  $field  The field to search (use .keyword for text fields)
+     * @param  mixed  $value  The exact value to match
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->term('status', 'published');
+     * $builder->term('category.keyword', 'Technology');
+     * ```
+     */
     public function term(string $field, mixed $value): static
     {
         $this->addQueryProtected([
@@ -128,6 +243,22 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a terms query for matching any of multiple values.
+     *
+     * Finds documents where the field matches any of the specified values.
+     * Equivalent to multiple term queries combined with OR.
+     *
+     * @param  string  $field  The field to search
+     * @param  array  $values  Array of values to match against
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->terms('status', ['published', 'draft']);
+     * $builder->terms('tags.keyword', ['php', 'laravel', 'elasticsearch']);
+     * ```
+     */
     public function terms(string $field, array $values): static
     {
         $this->addQueryProtected([
@@ -139,11 +270,43 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Start building a range query for numeric or date fields.
+     *
+     * Returns a RangeQueryBuilder for chaining range conditions.
+     *
+     * @param  string  $field  The field to apply the range query to
+     * @return RangeQueryBuilderContract The range query builder for chaining
+     *
+     * @example
+     * ```php
+     * $builder->range('price')->gte(100)->lt(500);
+     * $builder->range('created_at')->gte('2024-01-01')->lte('now');
+     * ```
+     */
     public function range(string $field): RangeQueryBuilderContract
     {
         return new RangeQueryBuilder($this, $field);
     }
 
+    /**
+     * Create a bool query with must/should/filter/mustNot clauses.
+     *
+     * Bool queries combine multiple query clauses. If a callback is provided,
+     * the query is built immediately. Otherwise, returns the builder for chaining.
+     *
+     * @param  callable|null  $callback  Optional callback receiving the BoolQueryBuilder
+     * @return BoolQueryBuilderContract The bool query builder
+     *
+     * @example
+     * ```php
+     * $builder->bool(function ($bool) {
+     *     $bool->must(fn($q) => $q->match('title', 'Laravel'));
+     *     $bool->filter(fn($q) => $q->term('status', 'published'));
+     *     $bool->should(fn($q) => $q->term('featured', true));
+     * });
+     * ```
+     */
     public function bool(?callable $callback = null): BoolQueryBuilderContract
     {
         $boolBuilder = new BoolQueryBuilder($this);
@@ -156,6 +319,23 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $boolBuilder;
     }
 
+    /**
+     * Add a nested query for searching nested objects.
+     *
+     * Required when querying fields of nested object type.
+     * The callback receives a fresh query builder for the nested context.
+     *
+     * @param  string  $path  The path to the nested object field
+     * @param  callable  $callback  Callback receiving a query builder for the nested query
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->nested('comments', function ($q) {
+     *     $q->match('comments.content', 'great post');
+     * });
+     * ```
+     */
     public function nested(string $path, callable $callback): static
     {
         $nestedQuery = new ElasticsearchQueryBuilder($this->client, $this->manager);
@@ -171,6 +351,22 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a wildcard query for pattern matching.
+     *
+     * Supports * (matches any characters) and ? (matches single character).
+     * Note: Wildcard queries can be slow on large datasets.
+     *
+     * @param  string  $field  The field to search
+     * @param  string  $value  The wildcard pattern
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->wildcard('email', '*@example.com');
+     * $builder->wildcard('code', 'ABC-???-*');
+     * ```
+     */
     public function wildcard(string $field, string $value): static
     {
         $this->addQueryProtected([
@@ -182,6 +378,23 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a fuzzy query for approximate string matching.
+     *
+     * Finds documents with terms similar to the search term,
+     * allowing for typos and misspellings.
+     *
+     * @param  string  $field  The field to search
+     * @param  mixed  $value  The search term
+     * @param  array  $options  Options like fuzziness, prefix_length, max_expansions
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->fuzzy('name', 'elasticsearch');
+     * $builder->fuzzy('name', 'elasticsearch', ['fuzziness' => 2]);
+     * ```
+     */
     public function fuzzy(string $field, mixed $value, array $options = []): static
     {
         $fuzzy = array_merge(['value' => $value], $options);
@@ -195,6 +408,19 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add an exists query to find documents with a field value.
+     *
+     * Matches documents where the specified field has a non-null value.
+     *
+     * @param  string  $field  The field that must exist
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->exists('email');
+     * ```
+     */
     public function exists(string $field): static
     {
         $this->addQueryProtected([
@@ -206,6 +432,17 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Set the maximum number of results to return.
+     *
+     * @param  int  $size  Maximum number of hits to return
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->size(50)->execute();
+     * ```
+     */
     public function size(int $size): static
     {
         $this->size = $size;
@@ -213,6 +450,20 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Set the offset for pagination.
+     *
+     * Combined with size() for paginating through results.
+     *
+     * @param  int  $from  Number of results to skip
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * // Page 2 with 20 results per page
+     * $builder->from(20)->size(20)->execute();
+     * ```
+     */
     public function from(int $from): static
     {
         $this->from = $from;
@@ -220,6 +471,27 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a sort clause to order results.
+     *
+     * Can be called multiple times to add multiple sort criteria.
+     *
+     * @param  string|array  $field  Field name or full sort configuration array
+     * @param  string  $direction  Sort direction: 'asc' or 'desc' (ignored if $field is array)
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * // Simple sort
+     * $builder->sort('created_at', 'desc');
+     *
+     * // Multiple sorts
+     * $builder->sort('featured', 'desc')->sort('created_at', 'desc');
+     *
+     * // Complex sort with array
+     * $builder->sort(['price' => ['order' => 'asc', 'mode' => 'avg']]);
+     * ```
+     */
     public function sort(string|array $field, string $direction = 'asc'): static
     {
         if (is_string($field)) {
@@ -231,6 +503,26 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Configure source field filtering in results.
+     *
+     * Controls which fields are returned in the _source of each hit.
+     *
+     * @param  array|string|bool  $source  Fields to include, or false to exclude all
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * // Include specific fields
+     * $builder->source(['title', 'author', 'created_at']);
+     *
+     * // Exclude source entirely (just get IDs)
+     * $builder->source(false);
+     *
+     * // Include/exclude patterns
+     * $builder->source(['includes' => ['title', 'content'], 'excludes' => ['password']]);
+     * ```
+     */
     public function source(array|string|bool $source): static
     {
         $this->source = $source;
@@ -238,6 +530,23 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Enable highlighting for specified fields.
+     *
+     * Highlighted fragments show matching search terms in context.
+     *
+     * @param  array  $fields  Fields to highlight with their options
+     * @param  array  $options  Global highlight options (pre_tags, post_tags, etc.)
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->highlight(
+     *     ['title' => new \stdClass, 'content' => ['fragment_size' => 150]],
+     *     ['pre_tags' => ['<em>'], 'post_tags' => ['</em>']]
+     * );
+     * ```
+     */
     public function highlight(array $fields, array $options = []): static
     {
         $this->highlight = array_merge($options, ['fields' => $fields]);
@@ -245,6 +554,22 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a named aggregation to the query.
+     *
+     * Aggregations provide analytics and statistics about search results.
+     *
+     * @param  string  $name  Name for this aggregation in the response
+     * @param  callable  $callback  Callback receiving an AggregationBuilder
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->aggregation('categories', fn($agg) =>
+     *     $agg->terms('category.keyword')->size(10)
+     * );
+     * ```
+     */
     public function aggregation(string $name, callable $callback): static
     {
         $aggregationBuilder = new AggregationBuilder;
@@ -254,6 +579,22 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add a filter context clause.
+     *
+     * Filter clauses must match but don't contribute to scoring.
+     * They are cached by Elasticsearch for better performance.
+     *
+     * @param  callable  $callback  Callback receiving a query builder for the filter
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder
+     *     ->match('title', 'Laravel')
+     *     ->filter(fn($q) => $q->term('status', 'published'));
+     * ```
+     */
     public function filter(callable $callback): static
     {
         $filterQuery = new ElasticsearchQueryBuilder($this->client, $this->manager);
@@ -263,6 +604,15 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this;
     }
 
+    /**
+     * Build the final Elasticsearch query array.
+     *
+     * Assembles all query clauses, filters, aggregations, sorting,
+     * and other options into the format expected by Elasticsearch.
+     * Multiple queries are automatically wrapped in a bool.must clause.
+     *
+     * @return array The complete Elasticsearch query body
+     */
     public function build(): array
     {
         $body = [];
@@ -324,6 +674,17 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $body;
     }
 
+    /**
+     * Execute the query and return results.
+     *
+     * Sends the built query to Elasticsearch and returns the response.
+     * If caching is enabled (via the IsCacheable trait), results may be cached.
+     *
+     * @return array The Elasticsearch search response
+     *
+     * @throws \RuntimeException If the client is not set
+     * @throws \JayI\Stretch\Exceptions\StretchException If the search fails
+     */
     public function execute(): array
     {
         if (! $this->client) {
@@ -344,16 +705,41 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         return $this->client->search($params);
     }
 
+    /**
+     * Get the query as an array for debugging.
+     *
+     * Alias for build() - useful for inspecting the query structure.
+     *
+     * @return array The complete Elasticsearch query body
+     */
     public function toArray(): array
     {
         return $this->build();
     }
 
+    /**
+     * Add a raw query clause to the builder.
+     *
+     * Used internally by sub-builders (like RangeQueryBuilder) to add
+     * their constructed queries to the parent builder.
+     *
+     * @param  array  $query  The query clause to add
+     */
     public function addQuery(array $query): void
     {
         $this->query[] = $query;
     }
 
+    /**
+     * Update an existing range query for a specific field.
+     *
+     * Used by RangeQueryBuilder when chaining multiple conditions
+     * (e.g., gte()->lte()) to update the existing range query
+     * rather than adding a new one.
+     *
+     * @param  string  $field  The field name of the range query to update
+     * @param  array  $rangeQuery  The updated range query
+     */
     public function updateLastRangeQuery(string $field, array $rangeQuery): void
     {
         // Find and update the last range query for this field
@@ -365,6 +751,14 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         }
     }
 
+    /**
+     * Internal method to add a query clause.
+     *
+     * Same as addQuery but protected - used by internal methods
+     * to build the query array.
+     *
+     * @param  array  $query  The query clause to add
+     */
     protected function addQueryProtected(array $query): void
     {
         $this->query[] = $query;

@@ -16,6 +16,8 @@ use JayI\Stretch\Contracts\QueryBuilderContract;
  *
  * The main entry point for building and executing Elasticsearch queries.
  * Provides fluent API for query building, index management, and multi-connection support.
+ *
+ * @phpstan-consistent-constructor
  */
 class Stretch
 {
@@ -67,11 +69,25 @@ class Stretch
 
         $client = new ElasticsearchClient($this->manager->connection($name));
 
-        return new self($client, $this->manager);
+        return new static($client, $this->manager);
     }
 
     /**
-     * Create a new query builder for a specific index
+     * Create a new query builder for a specific index.
+     *
+     * Shortcut method that creates a query builder and sets the index in one call.
+     *
+     * @param  string|array  $index  The index name or array of index names to search
+     * @return QueryBuilderContract A new query builder configured for the specified index(es)
+     *
+     * @example
+     * ```php
+     * // Single index
+     * Stretch::index('posts')->match('title', 'Laravel')->execute();
+     *
+     * // Multiple indices
+     * Stretch::index(['posts', 'comments'])->match('content', 'search term')->execute();
+     * ```
      */
     public function index(string|array $index): QueryBuilderContract
     {
@@ -97,7 +113,12 @@ class Stretch
     }
 
     /**
-     * Get the underlying Elasticsearch client
+     * Get the underlying Elasticsearch client.
+     *
+     * Provides direct access to the client for advanced operations
+     * not covered by the query builder interface.
+     *
+     * @return ClientContract The Elasticsearch client instance
      */
     public function client(): ClientContract
     {
@@ -105,7 +126,10 @@ class Stretch
     }
 
     /**
-     * Check if an index exists
+     * Check if an index exists.
+     *
+     * @param  string  $index  The index name to check
+     * @return bool True if the index exists, false otherwise
      */
     public function indexExists(string $index): bool
     {
@@ -113,7 +137,21 @@ class Stretch
     }
 
     /**
-     * Create an index
+     * Create a new Elasticsearch index.
+     *
+     * @param  string  $index  The name of the index to create
+     * @param  array  $settings  Optional index settings and mappings
+     * @return array The Elasticsearch response
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If index creation fails
+     *
+     * @example
+     * ```php
+     * Stretch::createIndex('posts', [
+     *     'settings' => ['number_of_shards' => 1],
+     *     'mappings' => ['properties' => ['title' => ['type' => 'text']]]
+     * ]);
+     * ```
      */
     public function createIndex(string $index, array $settings = []): array
     {
@@ -121,7 +159,14 @@ class Stretch
     }
 
     /**
-     * Delete an index
+     * Delete an Elasticsearch index.
+     *
+     * Warning: This operation is irreversible and will delete all data in the index.
+     *
+     * @param  string  $index  The name of the index to delete
+     * @return array The Elasticsearch response
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If index deletion fails
      */
     public function deleteIndex(string $index): array
     {
@@ -129,7 +174,14 @@ class Stretch
     }
 
     /**
-     * Get cluster health
+     * Get Elasticsearch cluster health information.
+     *
+     * Returns cluster status (green, yellow, red), node counts,
+     * and other health metrics.
+     *
+     * @return array The cluster health response
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If health check fails
      */
     public function health(): array
     {
@@ -137,7 +189,13 @@ class Stretch
     }
 
     /**
-     * Get all indices
+     * Get information about all Elasticsearch indices.
+     *
+     * Returns an array of all indices with their settings and mappings.
+     *
+     * @return array Array of index information
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If retrieving indices fails
      */
     public function indices(): array
     {
@@ -145,7 +203,24 @@ class Stretch
     }
 
     /**
-     * Perform bulk operations
+     * Perform bulk index, update, or delete operations.
+     *
+     * Efficiently execute multiple operations in a single request.
+     *
+     * @param  array  $operations  Array of bulk operations (action/metadata and source pairs)
+     * @return array The bulk response with results for each operation
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If bulk operation fails
+     *
+     * @example
+     * ```php
+     * Stretch::bulk([
+     *     ['index' => ['_index' => 'posts', '_id' => '1']],
+     *     ['title' => 'First Post', 'content' => 'Hello World'],
+     *     ['index' => ['_index' => 'posts', '_id' => '2']],
+     *     ['title' => 'Second Post', 'content' => 'Another post'],
+     * ]);
+     * ```
      */
     public function bulk(array $operations): array
     {
@@ -153,7 +228,26 @@ class Stretch
     }
 
     /**
-     * Index a document
+     * Index (create or update) a document.
+     *
+     * If an ID is provided and a document with that ID exists, it will be updated.
+     * If no ID is provided, Elasticsearch will generate one automatically.
+     *
+     * @param  string  $index  The index to store the document in
+     * @param  array  $document  The document data to index
+     * @param  string|null  $id  Optional document ID (auto-generated if not provided)
+     * @return array The index response including the document ID and version
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If indexing fails
+     *
+     * @example
+     * ```php
+     * // With auto-generated ID
+     * Stretch::indexDocument('posts', ['title' => 'My Post', 'content' => 'Hello']);
+     *
+     * // With specific ID
+     * Stretch::indexDocument('posts', ['title' => 'My Post'], 'post-123');
+     * ```
      */
     public function indexDocument(string $index, array $document, ?string $id = null): array
     {
@@ -170,7 +264,21 @@ class Stretch
     }
 
     /**
-     * Update a document
+     * Partially update a document.
+     *
+     * Updates only the specified fields without replacing the entire document.
+     *
+     * @param  string  $index  The index containing the document
+     * @param  string  $id  The document ID to update
+     * @param  array  $document  The fields to update
+     * @return array The update response including the new version
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If update fails
+     *
+     * @example
+     * ```php
+     * Stretch::updateDocument('posts', 'post-123', ['title' => 'Updated Title']);
+     * ```
      */
     public function updateDocument(string $index, string $id, array $document): array
     {
@@ -184,7 +292,13 @@ class Stretch
     }
 
     /**
-     * Delete a document
+     * Delete a document by ID.
+     *
+     * @param  string  $index  The index containing the document
+     * @param  string  $id  The document ID to delete
+     * @return array The delete response
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If deletion fails
      */
     public function deleteDocument(string $index, string $id): array
     {
@@ -195,7 +309,13 @@ class Stretch
     }
 
     /**
-     * Get a document by ID
+     * Retrieve a document by ID.
+     *
+     * @param  string  $index  The index containing the document
+     * @param  string  $id  The document ID to retrieve
+     * @return array The document including _source, _id, and metadata
+     *
+     * @throws \JayI\Stretch\Exceptions\StretchException If document not found or retrieval fails
      */
     public function getDocument(string $index, string $id): array
     {

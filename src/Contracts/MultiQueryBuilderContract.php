@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace JayI\Stretch\Contracts;
 
+/**
+ * Contract for Elasticsearch multi-search query builders.
+ *
+ * Defines the interface for combining multiple search queries into a single
+ * request, reducing network overhead when executing several searches at once.
+ * Each query can target different indices and have its own search criteria.
+ */
 interface MultiQueryBuilderContract
 {
     /**
@@ -29,7 +36,9 @@ interface MultiQueryBuilderContract
     public function execute(): array;
 
     /**
-     * Get the raw query array for debugging
+     * Get the raw query array for debugging.
+     *
+     * @return array The msearch body array
      */
     public function toArray(): array;
 }

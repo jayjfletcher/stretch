@@ -16,6 +16,8 @@ use JayI\Stretch\ElasticsearchManager;
  *
  * This class allows you to combine multiple search queries into a single request,
  * reducing network overhead when you need to execute several searches at once.
+ *
+ * @phpstan-consistent-constructor
  */
 class MultiQueryBuilder implements MultiQueryBuilderContract
 {
@@ -56,9 +58,26 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
 
         $client = new ElasticsearchClient($this->manager->connection($name));
 
-        return new self($client, $this->manager);
+        return new static($client, $this->manager);
     }
 
+    /**
+     * Add a query to the multi-search request.
+     *
+     * Each query can target different indices and have its own search criteria.
+     * Queries are executed in parallel by Elasticsearch.
+     *
+     * @param  string|array  $index  The index or indices to search
+     * @param  callable|QueryBuilderContract  $query  A callback or query builder instance
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * $builder->add('posts', fn($q) => $q->match('title', 'Laravel'))
+     *         ->add('comments', fn($q) => $q->match('content', 'great'))
+     *         ->add(['users', 'profiles'], fn($q) => $q->term('active', true));
+     * ```
+     */
     public function add(string|array $index, callable|QueryBuilderContract $query): static
     {
         if (is_callable($query)) {
@@ -75,6 +94,15 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
         return $this;
     }
 
+    /**
+     * Build the multi-search request body.
+     *
+     * Creates the alternating header/body format required by Elasticsearch's
+     * _msearch endpoint. Each query produces two array entries: a header with
+     * index information, and a body with the query itself.
+     *
+     * @return array The msearch body array with alternating header/body entries
+     */
     public function build(): array
     {
         $body = [];
@@ -97,6 +125,28 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
         return $body;
     }
 
+    /**
+     * Execute the multi-search request.
+     *
+     * Sends all queries to Elasticsearch in a single request and returns
+     * all results. If caching is enabled, results may be cached.
+     *
+     * @return array The msearch response with 'responses' array containing each query's result
+     *
+     * @throws \RuntimeException If the client is not set
+     * @throws \JayI\Stretch\Exceptions\StretchException If the multi-search fails
+     *
+     * @example
+     * ```php
+     * $results = Stretch::multi()
+     *     ->add('posts', fn($q) => $q->match('title', 'Laravel'))
+     *     ->add('users', fn($q) => $q->term('active', true))
+     *     ->execute();
+     *
+     * $postsHits = $results['responses'][0]['hits']['hits'];
+     * $usersHits = $results['responses'][1]['hits']['hits'];
+     * ```
+     */
     public function execute(): array
     {
         if (! $this->client) {
@@ -110,6 +160,13 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
         return $this->client->msearch(['body' => $this->build()]);
     }
 
+    /**
+     * Get the multi-search request as an array for debugging.
+     *
+     * Alias for build() - useful for inspecting the request structure.
+     *
+     * @return array The msearch body array
+     */
     public function toArray(): array
     {
         return $this->build();

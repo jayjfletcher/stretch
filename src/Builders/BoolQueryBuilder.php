@@ -7,22 +7,77 @@ namespace JayI\Stretch\Builders;
 use JayI\Stretch\Contracts\BoolQueryBuilderContract;
 use JayI\Stretch\Contracts\QueryBuilderContract;
 
+/**
+ * Builds Elasticsearch bool queries with must, should, filter, and must_not clauses.
+ *
+ * Bool queries combine multiple query clauses with different occurrence types:
+ * - must: Clauses that must match (AND logic, affects scoring)
+ * - should: Clauses that should match (OR logic, affects scoring)
+ * - filter: Clauses that must match (AND logic, no scoring - faster)
+ * - must_not: Clauses that must not match (NOT logic)
+ *
+ * @example
+ * ```php
+ * $builder->bool(function ($bool) {
+ *     $bool->must(fn($q) => $q->match('title', 'Laravel'));
+ *     $bool->filter(fn($q) => $q->term('status', 'published'));
+ *     $bool->should(fn($q) => $q->term('featured', true));
+ *     $bool->minimumShouldMatch(1);
+ * });
+ * ```
+ */
 class BoolQueryBuilder implements BoolQueryBuilderContract
 {
+    /**
+     * Must clauses (AND logic with scoring).
+     *
+     * @var array<int, array>
+     */
     protected array $must = [];
 
+    /**
+     * Should clauses (OR logic with scoring).
+     *
+     * @var array<int, array>
+     */
     protected array $should = [];
 
+    /**
+     * Filter clauses (AND logic without scoring).
+     *
+     * @var array<int, array>
+     */
     protected array $filter = [];
 
+    /**
+     * Must not clauses (NOT logic).
+     *
+     * @var array<int, array>
+     */
     protected array $mustNot = [];
 
+    /**
+     * Minimum number of should clauses that must match.
+     */
     protected int|string|null $minimumShouldMatch = null;
 
+    /**
+     * Create a new BoolQueryBuilder instance.
+     *
+     * @param  QueryBuilderContract  $parent  The parent query builder
+     */
     public function __construct(
         protected QueryBuilderContract $parent
     ) {}
 
+    /**
+     * Add must clauses to the bool query.
+     *
+     * Documents must match these clauses. Contributes to scoring.
+     *
+     * @param  callable|array<callable>  $callback  Single callback or array of callbacks
+     * @return static Returns the builder instance for method chaining
+     */
     public function must(callable|array $callback): static
     {
         if (is_callable($callback)) {
@@ -38,6 +93,15 @@ class BoolQueryBuilder implements BoolQueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add should clauses to the bool query.
+     *
+     * Documents should match these clauses. Contributes to scoring.
+     * Use minimumShouldMatch to require a certain number of matches.
+     *
+     * @param  callable|array<callable>  $callback  Single callback or array of callbacks
+     * @return static Returns the builder instance for method chaining
+     */
     public function should(callable|array $callback): static
     {
         if (is_callable($callback)) {
@@ -53,6 +117,15 @@ class BoolQueryBuilder implements BoolQueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add filter clauses to the bool query.
+     *
+     * Documents must match these clauses but they don't contribute to scoring.
+     * Filter clauses are cached by Elasticsearch for better performance.
+     *
+     * @param  callable|array<callable>  $callback  Single callback or array of callbacks
+     * @return static Returns the builder instance for method chaining
+     */
     public function filter(callable|array $callback): static
     {
         if (is_callable($callback)) {
@@ -68,6 +141,14 @@ class BoolQueryBuilder implements BoolQueryBuilderContract
         return $this;
     }
 
+    /**
+     * Add must_not clauses to the bool query.
+     *
+     * Documents must not match these clauses.
+     *
+     * @param  callable|array<callable>  $callback  Single callback or array of callbacks
+     * @return static Returns the builder instance for method chaining
+     */
     public function mustNot(callable|array $callback): static
     {
         if (is_callable($callback)) {
@@ -83,6 +164,12 @@ class BoolQueryBuilder implements BoolQueryBuilderContract
         return $this;
     }
 
+    /**
+     * Set the minimum number of should clauses that must match.
+     *
+     * @param  int|string  $minimum  Number or percentage (e.g., 2 or "75%")
+     * @return static Returns the builder instance for method chaining
+     */
     public function minimumShouldMatch(int|string $minimum): static
     {
         $this->minimumShouldMatch = $minimum;
@@ -90,11 +177,23 @@ class BoolQueryBuilder implements BoolQueryBuilderContract
         return $this;
     }
 
+    /**
+     * Get the parent query builder.
+     *
+     * @return QueryBuilderContract The parent query builder instance
+     */
     public function getParent(): QueryBuilderContract
     {
         return $this->parent;
     }
 
+    /**
+     * Build the bool query array.
+     *
+     * Assembles all clauses into a properly formatted Elasticsearch bool query.
+     *
+     * @return array The Elasticsearch bool query structure
+     */
     public function build(): array
     {
         $bool = [];
