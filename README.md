@@ -177,11 +177,11 @@ $results = Stretch::index('posts')
     ->setCachePrefix('search:')
     ->execute();
 
-// Use a specific cache driver
+// Use a specific cache store
 $results = Stretch::index('posts')
     ->match('title', 'Laravel')
     ->cache()
-    ->setCacheDriver('redis')
+    ->setCacheStore('redis')
     ->execute();
 
 // Clear cache before executing (force fresh results)
@@ -198,7 +198,7 @@ $results = Stretch::index('posts')
     ->cache()
     ->setCacheTtl([600, 1200])
     ->setCachePrefix('es:posts:')
-    ->setCacheDriver('redis')
+    ->setCacheStore('redis')
     ->execute();
 ```
 
