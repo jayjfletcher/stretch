@@ -6,6 +6,7 @@ namespace JayI\Stretch;
 
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\Exception\ConfigException;
 use Illuminate\Contracts\Foundation\Application;
 
 /**
@@ -80,35 +81,15 @@ class ElasticsearchManager
      * specified connection name. Supports various authentication methods
      * including basic auth, API keys, and Elastic Cloud.
      *
-     * @param  string  $name  The connection name
+     * @param string $name The connection name
      * @return Client The configured Elasticsearch client
+     * @throws ConfigException
      */
     protected function makeConnection(string $name): Client
     {
         $config = $this->getConnectionConfig($name);
 
-        $clientBuilder = ClientBuilder::create()
-            ->setHosts($config['hosts']);
-
-        // Configure authentication
-        if (! empty($config['username']) && ! empty($config['password'])) {
-            $clientBuilder->setBasicAuthentication($config['username'], $config['password']);
-        }
-
-        if (! empty($config['api_key'])) {
-            $clientBuilder->setApiKey($config['api_key']);
-        }
-
-        if (! empty($config['cloud_id'])) {
-            $clientBuilder->setElasticCloudId($config['cloud_id']);
-        }
-
-        // SSL configuration
-        if (! $config['ssl_verification']) {
-            $clientBuilder->setSSLVerification(false);
-        }
-
-        return $clientBuilder->build();
+        return ClientBuilder::fromConfig($config);
     }
 
     /**

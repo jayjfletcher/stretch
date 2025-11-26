@@ -647,9 +647,7 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         }
 
         // Add other parameters
-        if ($this->size !== null) {
-            $body['size'] = $this->size;
-        }
+        $body['size'] = min(($this->size ?? config('stretch.query.default_size')), config('stretch.query.max_size'));
 
         if ($this->from !== null) {
             $body['from'] = $this->from;

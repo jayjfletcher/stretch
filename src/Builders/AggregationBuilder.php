@@ -298,8 +298,8 @@ class AggregationBuilder implements AggregationBuilderContract
         $agg = $this->aggregation;
 
         // Add size if specified and this is a bucket aggregation
-        if ($this->size !== null && isset($agg['terms'])) {
-            $agg['terms']['size'] = $this->size;
+        if (isset($agg['terms'])) {
+            $agg['terms']['size'] = min(($this->size ?? config('stretch.aggregations.default_size')), config('stretch.aggregations.max_buckets'));
         }
 
         // Add order if specified and this is a bucket aggregation

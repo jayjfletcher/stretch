@@ -24,14 +24,19 @@ return [
     */
     'connections' => [
         'default' => [
-            'hosts' => [
+            'Hosts' => [
                 env('ELASTICSEARCH_HOST', 'localhost:9200'),
             ],
-            'username' => env('ELASTICSEARCH_USERNAME'),
-            'password' => env('ELASTICSEARCH_PASSWORD'),
-            'cloud_id' => env('ELASTICSEARCH_CLOUD_ID'),
-            'api_key' => env('ELASTICSEARCH_API_KEY'),
-            'ssl_verification' => env('ELASTICSEARCH_SSL_VERIFICATION', true),
+//            'BasicAuthentication' => [
+//                'username' => env('ELASTICSEARCH_USERNAME'),
+//                'password' => env('ELASTICSEARCH_PASSWORD'),
+//            ],
+            'ElasticCloudId' => env('ELASTICSEARCH_CLOUD_ID'),
+            'ApiKey' => [
+                'apiKey' => env('ELASTICSEARCH_API_KEY'),
+                'id' => env('ELASTICSEARCH_API_ID')
+            ],
+            'SSLVerification' => env('ELASTICSEARCH_SSL_VERIFICATION', true),
         ],
     ],
 
@@ -46,8 +51,8 @@ return [
     'query' => [
         'default_size' => 10,
         'max_size' => 10000,
-        'timeout' => env('ELASTICSEARCH_TIMEOUT', '30s'),
-        'allow_partial_search_results' => true,
+        'timeout' => env('ELASTICSEARCH_TIMEOUT', '10s'), // not supported yet
+        'allow_partial_search_results' => true, //not supported yet
     ],
 
     /*
