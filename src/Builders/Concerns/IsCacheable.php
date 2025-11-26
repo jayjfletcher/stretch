@@ -7,6 +7,8 @@ namespace JayI\Stretch\Builders\Concerns;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use JayI\Stretch\Builders\ElasticsearchQueryBuilder;
+use JayI\Stretch\Builders\MultiQueryBuilder;
 
 /**
  * Provides caching capabilities for Elasticsearch query builders.
@@ -49,14 +51,14 @@ trait IsCacheable
     protected ?string $cachePrefix = null;
 
     /**
-     * Custom cache driver name.
+     * Custom cache store name.
      */
-    protected ?string $cacheDriver = null;
+    protected ?string $cacheStore = null;
 
     /**
      * Enable caching for this query.
      *
-     * @return self Returns the builder instance for method chaining
+     * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      */
     public function cache(): self
     {
@@ -69,7 +71,7 @@ trait IsCacheable
      * This forces a fresh result by invalidating the cached entry
      * before executing the query.
      *
-     * @return self Returns the builder instance for method chaining
+     * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      */
     public function clearCache(): self
     {
@@ -89,8 +91,8 @@ trait IsCacheable
     /**
      * Set whether caching is enabled.
      *
-     * @param  bool  $cacheEnabled  Whether to enable caching
-     * @return self Returns the builder instance for method chaining
+     * @param bool $cacheEnabled Whether to enable caching
+     * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      */
     public function setCacheEnabled(bool $cacheEnabled = true): self
     {
@@ -112,8 +114,8 @@ trait IsCacheable
     /**
      * Set whether to clear the cache before execution.
      *
-     * @param  bool  $clear  Whether to clear the cache
-     * @return self Returns the builder instance for method chaining
+     * @param bool $clear Whether to clear the cache
+     * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      */
     public function setCacheClear(bool $clear = true): self
     {
@@ -135,11 +137,11 @@ trait IsCacheable
     /**
      * Set the cache TTL for flexible caching.
      *
-     * Uses Laravel's flexible cache method which supports stale-while-revalidate.
+     * Uses Laravel's flexible cache method, which supports stale-while-revalidate.
      * The first value is the "fresh" period, the second is the "stale" period.
      *
-     * @param  array<int>  $ttl  Array of [fresh_seconds, stale_seconds]
-     * @return self Returns the builder instance for method chaining
+     * @param array<int> $ttl Array of [fresh_seconds, stale_seconds]
+     * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      *
      * @example
      * ```php
@@ -168,8 +170,8 @@ trait IsCacheable
     /**
      * Set a custom prefix for the cache key.
      *
-     * @param  string  $prefix  The prefix to prepend to cache keys
-     * @return self Returns the builder instance for method chaining
+     * @param string $prefix The prefix to prepend to cache keys
+     * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      */
     public function setCachePrefix(string $prefix): self
     {
@@ -191,28 +193,28 @@ trait IsCacheable
     }
 
     /**
-     * Set a custom cache driver.
+     * Set a custom cache store.
      *
-     * @param  string  $driver  The Laravel cache driver name
-     * @return self Returns the builder instance for method chaining
+     * @param string $store The Laravel cache store name
+     * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      */
-    public function setCacheDriver(string $driver): self
+    public function setCacheStore(string $store): self
     {
-        $this->cacheDriver = $driver;
+        $this->cacheStore = $store;
 
         return $this;
     }
 
     /**
-     * Get the cache driver name.
+     * Get the cache store name.
      *
-     * Returns the custom driver if set, otherwise falls back to config value.
+     * Returns the custom store if set, otherwise falls back to config value.
      *
-     * @return string The cache driver name
+     * @return string The cache store name
      */
-    public function getCacheDriver(): string
+    public function getCacheStore(): string
     {
-        return $this->cacheDriver ?? config('stretch.cache.driver', 'default');
+        return $this->cacheStore ?? config('stretch.cache.store', 'file');
     }
 
     /**
@@ -259,7 +261,7 @@ trait IsCacheable
         $key = $this->getCachePrefix().$indexes.$hash;
 
         if ($clear) {
-            Cache::driver($this->getCacheDriver())->forget($key);
+            Cache::store($this->getCacheStore())->forget($key);
         }
 
         return $key;
@@ -282,7 +284,7 @@ trait IsCacheable
 
         return when(
             condition: $this->isCacheEnabled() && ($name == 'execute'),
-            value: fn () => Cache::driver($this->getCacheDriver())->flexible(
+            value: fn () => Cache::store($this->getCacheStore())->flexible(
                 key: $this->getCacheKey($this->getCacheClear()),
                 ttl: $this->getCacheTtl(),
                 callback: $callback

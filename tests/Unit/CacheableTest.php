@@ -10,7 +10,7 @@ use JayI\Stretch\Contracts\ClientContract;
 beforeEach(function () {
     config(['stretch.cache.ttl' => [300, 600]]);
     config(['stretch.cache.prefix' => '']);
-    config(['stretch.cache.driver' => 'default']);
+    config(['stretch.cache.store' => 'default']);
 });
 
 it('can enable caching with cache method', function () {
@@ -67,20 +67,20 @@ it('uses default prefix from config when not set', function () {
     expect($builder->getCachePrefix())->toBe('es:');
 });
 
-it('can set cache driver', function () {
+it('can set cache store', function () {
     $builder = new ElasticsearchQueryBuilder;
 
-    $builder->setCacheDriver('redis');
+    $builder->setCacheStore('redis');
 
-    expect($builder->getCacheDriver())->toBe('redis');
+    expect($builder->getCacheStore())->toBe('redis');
 });
 
-it('uses default driver from config when not set', function () {
-    config(['stretch.cache.driver' => 'file']);
+it('uses default store from config when not set', function () {
+    config(['stretch.cache.store' => 'file']);
 
     $builder = new ElasticsearchQueryBuilder;
 
-    expect($builder->getCacheDriver())->toBe('file');
+    expect($builder->getCacheStore())->toBe('file');
 });
 
 it('can enable cache clearing', function () {
@@ -213,7 +213,7 @@ it('clears cache when clearCache is called', function () {
         ->match('title', 'Laravel')
         ->clearCache();
 
-    Cache::shouldReceive('driver')
+    Cache::shouldReceive('store')
         ->with('default')
         ->andReturnSelf();
 
@@ -247,14 +247,14 @@ it('supports method chaining for all cache configuration', function () {
         ->cache()
         ->setCacheTtl([600, 1200])
         ->setCachePrefix('search:')
-        ->setCacheDriver('redis')
+        ->setCacheStore('redis')
         ->clearCache();
 
     expect($result)->toBeInstanceOf(ElasticsearchQueryBuilder::class);
     expect($result->isCacheEnabled())->toBeTrue();
     expect($result->getCacheTtl())->toBe([600, 1200]);
     expect($result->getCachePrefix())->toBe('search:');
-    expect($result->getCacheDriver())->toBe('redis');
+    expect($result->getCacheStore())->toBe('redis');
     expect($result->getCacheClear())->toBeTrue();
 });
 

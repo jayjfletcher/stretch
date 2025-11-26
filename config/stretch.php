@@ -91,6 +91,6 @@ return [
         'enabled' => env('STRETCH_CACHE_ENABLED', true),
         'ttl' => env('STRETCH_CACHE_TTL', [300, 600]),
         'prefix' => env('STRETCH_CACHE_PREFIX', 'stretch:'),
-        'driver' => env('STRETCH_CACHE_DRIVER', 'default'),
+        'store' => env('STRETCH_CACHE_STORE', env('CACHE_STORE', 'database')),
     ],
 ];
