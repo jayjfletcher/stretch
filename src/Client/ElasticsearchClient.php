@@ -23,7 +23,7 @@ class ElasticsearchClient implements ClientContract
         try {
             $this->logQuery($params);
 
-            $response = $this->cacheQueryResults($params);
+            $response = $this->client->search($params)->asArray();
 
             $this->logSlowQuery($params, $response);
             return $response;
@@ -127,6 +127,21 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
+    public function msearch(array $params): array
+    {
+        try {
+            $this->logQuery($params);
+
+            $response = $this->client->msearch($params)->asArray();
+
+            $this->logSlowQuery($params, $response);
+
+            return $response;
+        } catch (Exception $exception) {
+            throw new StretchException("Multi-search operation failed: {$exception->getMessage()}", 0, $exception);
+        }
+    }
+
     protected function logQuery(array $query): void
     {
         if(config('stretch.logging.log_queries')){
@@ -151,18 +166,4 @@ class ElasticsearchClient implements ClientContract
         }
     }
 
-    protected function cacheQueryResults(array $params): array
-    {
-        $callback = fn() => $this->client->search($params)->asArray();
-
-        return when(
-            condition: config('stretch.cache.enabled'),
-            value: fn() => Cache::driver(config('stretch.cache.driver'))->flexible(
-                key: config('stretch.cache.prefix') . Arr::hash($params),
-                ttl: config('stretch.cache.ttl'),
-                callback: $callback
-            ),
-            default: $callback,
-        );
-    }
 }

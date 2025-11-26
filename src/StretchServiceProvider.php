@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace JayI\Stretch;
 
 use Elastic\Elasticsearch\Client;
+use JayI\Stretch\Builders\ElasticsearchQueryBuilder;
+use JayI\Stretch\Builders\MultiQueryBuilder;
 use JayI\Stretch\Client\ElasticsearchClient;
 use JayI\Stretch\Contracts\ClientContract;
+use JayI\Stretch\Contracts\MultiQueryBuilderContract;
 use JayI\Stretch\Contracts\QueryBuilderContract;
-use JayI\Stretch\Builders\ElasticsearchQueryBuilder;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -86,6 +88,7 @@ class StretchServiceProvider extends PackageServiceProvider
     protected function registerQueryBuilder(): void
     {
         $this->app->bind(QueryBuilderContract::class, ElasticsearchQueryBuilder::class);
+        $this->app->bind(MultiQueryBuilderContract::class, MultiQueryBuilder::class);
     }
 
     /**

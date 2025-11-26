@@ -127,6 +127,28 @@ $results = Stretch::index(['index_1', 'index_2'])
 
 ## Advanced Features
 
+### Multi-Query Support
+
+```php
+ // Execute multiple searches in a single request
+  $results = Stretch::multi()
+      ->add('posts', fn ($q) => $q->match('title', 'Laravel')->size(10))
+      ->add('users', fn ($q) => $q->term('status', 'active'))
+      ->add(['logs', 'events'], fn ($q) => $q->range('timestamp')->gte('2024-01-01'))
+      ->execute();
+
+  // Access individual responses
+  $postsResults = $results['responses'][0];
+  $usersResults = $results['responses'][1];
+
+  // Or use a query builder instance directly
+  $postQuery = Stretch::query()->match('title', 'Laravel');
+  Stretch::multi()
+      ->add('posts', $postQuery)
+      ->execute();
+
+```
+
 ### Nested Queries
 
 ```php

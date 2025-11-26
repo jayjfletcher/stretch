@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JayI\Stretch\Builders;
 
+use JayI\Stretch\Builders\Concerns\IsCacheable;
 use JayI\Stretch\Client\ElasticsearchClient;
 use JayI\Stretch\Contracts\BoolQueryBuilderContract;
 use JayI\Stretch\Contracts\ClientContract;
@@ -20,6 +21,8 @@ use JayI\Stretch\ElasticsearchManager;
  */
 class ElasticsearchQueryBuilder implements QueryBuilderContract
 {
+    use IsCacheable;
+
     protected array $query = [];
 
     protected array $aggregations = [];
@@ -37,6 +40,8 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
     protected ?int $from = null;
 
     protected array $filters = [];
+
+    protected bool $cache = false;
 
     /**
      * Create a new ElasticsearchQueryBuilder instance.
@@ -83,7 +88,7 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
 
         $client = new ElasticsearchClient($this->manager->connection($name));
 
-        return new static($client, $this->manager);
+        return new self($client, $this->manager);
     }
 
     public function match(string $field, mixed $value, array $options = []): static

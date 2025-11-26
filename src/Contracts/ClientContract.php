@@ -60,4 +60,9 @@ interface ClientContract
      * Get a document by ID
      */
     public function get(array $params): array;
+
+    /**
+     * Execute multiple search queries in a single request
+     */
+    public function msearch(array $params): array;
 }

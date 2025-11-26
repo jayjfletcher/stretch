@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace JayI\Stretch;
 
+use JayI\Stretch\Builders\ElasticsearchQueryBuilder;
+use JayI\Stretch\Builders\MultiQueryBuilder;
 use JayI\Stretch\Client\ElasticsearchClient;
 use JayI\Stretch\Contracts\ClientContract;
+use JayI\Stretch\Contracts\MultiQueryBuilderContract;
 use JayI\Stretch\Contracts\QueryBuilderContract;
-use JayI\Stretch\Builders\ElasticsearchQueryBuilder;
 
 /**
  * Stretch - Laravel Elasticsearch Query Builder
@@ -65,7 +67,7 @@ class Stretch
 
         $client = new ElasticsearchClient($this->manager->connection($name));
 
-        return new static($client, $this->manager);
+        return new self($client, $this->manager);
     }
 
     /**
@@ -74,6 +76,24 @@ class Stretch
     public function index(string|array $index): QueryBuilderContract
     {
         return $this->query()->index($index);
+    }
+
+    /**
+     * Create a new multi-query builder for executing multiple searches in a single request.
+     *
+     * @return MultiQueryBuilderContract A new multi-query builder instance
+     *
+     * @example
+     * ```php
+     * $results = Stretch::multi()
+     *     ->add('posts', fn ($q) => $q->match('title', 'Laravel'))
+     *     ->add('users', fn ($q) => $q->term('status', 'active'))
+     *     ->execute();
+     * ```
+     */
+    public function multi(): MultiQueryBuilderContract
+    {
+        return new MultiQueryBuilder($this->client, $this->manager);
     }
 
     /**
