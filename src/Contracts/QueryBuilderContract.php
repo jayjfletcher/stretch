@@ -226,4 +226,15 @@ interface QueryBuilderContract
      * Return the query's index
      */
     public function getIndex(): string|array|null;
+
+    /**
+     * Return the query's size
+     */
+    public function getSize(): int;
+
+    /**
+     * Return the query from
+     */
+    public function getFrom(): int;
+
 }

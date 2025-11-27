@@ -2,7 +2,10 @@
 
 namespace JayI\Stretch\Pagination;
 
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use JayI\Stretch\Contracts\QueryBuilderContract;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 /**
  * Class ElasticPaginator
@@ -36,14 +39,15 @@ class ElasticPaginator extends LengthAwarePaginator
         return $this->path;
     }
 
-    public static function fromResults(array $results, int $perPage, ?int $currentPage = null, array $options = []): self
+    public static function fromResponse(QueryBuilderContract $request, array $response, array $options = []): ElasticPaginator
     {
-        return new self(
-            items: data_get($results, 'hits.hits', []),
-            total: data_get($results, 'hits.total.value', 0),
-            perPage: $perPage,
-            currentPage: $currentPage,
-            options: $options
+        return new ElasticPaginator(
+            items: data_get($response, 'hits.hits', []),
+            total: data_get($response, 'hits.total.value', 0),
+            perPage: $request->getSize()?:config('stretch.query.default_size'),
+            currentPage: $request->getSize() ? (($request->getFrom()/$request->getSize()) + 1) : 1,
+            options: $options,
         );
+
     }
 }

@@ -11,6 +11,7 @@ use JayI\Stretch\Contracts\ClientContract;
 use JayI\Stretch\Contracts\MultiQueryBuilderContract;
 use JayI\Stretch\Contracts\QueryBuilderContract;
 use JayI\Stretch\ElasticsearchManager;
+use JayI\Stretch\Pagination\ElasticPaginator;
 
 /**
  * MultiQueryBuilder provides a fluent interface for building Elasticsearch multi-search requests.
@@ -146,8 +147,8 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
      *     ->add('users', fn($q) => $q->term('active', true))
      *     ->execute();
      *
-     * $postsHits = $results['responses'][0]['hits']['hits'];
-     * $usersHits = $results['responses'][1]['hits']['hits'];
+     * $postsHits = $results['responses']['posts']['hits']['hits'];
+     * $usersHits = $results['responses']['users']['hits']['hits'];
      * ```
      */
     public function execute(): array

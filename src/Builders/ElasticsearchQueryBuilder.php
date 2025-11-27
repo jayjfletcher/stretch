@@ -647,11 +647,8 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         }
 
         // Add other parameters
-        $body['size'] = min(($this->size ?? config('stretch.query.default_size')), config('stretch.query.max_size'));
-
-        if ($this->from !== null) {
-            $body['from'] = $this->from;
-        }
+        $body['size'] = $this->getSize();
+        $body['from'] = $this->getFrom();
 
         if (! empty($this->sort)) {
             $body['sort'] = $this->sort;
@@ -762,8 +759,28 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         $this->query[] = $query;
     }
 
+    /**
+     * Return the query's index
+     */
     public function getIndex(): string|array|null
     {
         return $this->index;
+    }
+
+    /**
+     * Return the query's size
+     */
+    public function getSize(): int
+    {
+        return min(($this->size ?? config('stretch.query.default_size')), config('stretch.query.max_size'));
+
+    }
+
+    /**
+     * Return the query from
+     */
+    public function getFrom(): int
+    {
+        return $this->from ?? 0;
     }
 }
