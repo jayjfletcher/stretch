@@ -24,6 +24,27 @@ it('can create a term query', function () {
     expect($query['query']['term']['status'])->toBe('published');
 });
 
+it('can create a semantic query', function () {
+    $builder = new ElasticsearchQueryBuilder;
+
+    $builder->semantic('semantic_contents', 'What is Laravel?');
+
+    $query = $builder->build();
+
+    expect($query['query']['semantic']['semantic_contents']['query'])->toBe('What is Laravel?');
+});
+
+it('can create a semantic query with options', function () {
+    $builder = new ElasticsearchQueryBuilder;
+
+    $builder->semantic('semantic_contents', 'machine learning', ['boost' => 2.0]);
+
+    $query = $builder->build();
+
+    expect($query['query']['semantic']['semantic_contents']['query'])->toBe('machine learning');
+    expect($query['query']['semantic']['semantic_contents']['boost'])->toBe(2.0);
+});
+
 it('can create a range query', function () {
     $builder = new ElasticsearchQueryBuilder;
 

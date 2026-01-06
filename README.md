@@ -50,6 +50,11 @@ $results = Stretch::index(['index_1', 'index_2'])
         ->gte('2024-01-01')
         ->lte('2024-12-31')
     ->execute();
+
+// Semantic search
+$results = Stretch::index(['index_1', 'index_2'])
+    ->semantic('semantic_contents', 'What is Laravel?')
+    ->execute();
 ```
 
 ### Bool Queries
@@ -238,6 +243,30 @@ $results = Stretch::index(['index_1', 'index_2'])
     ->execute();
 ```
 
+### Semantic Search
+
+Stretch supports semantic search using vector embeddings for meaning-based matching (requires Elasticsearch with semantic search capabilities):
+
+```php
+// Simple semantic search
+$results = Stretch::index('documents')
+    ->semantic('semantic_contents', 'What is Laravel?')
+    ->execute();
+
+// Semantic search with boost
+$results = Stretch::index('documents')
+    ->semantic('semantic_contents', 'machine learning', ['boost' => 2.0])
+    ->execute();
+
+// Combine semantic search with filters
+$results = Stretch::index('documents')
+    ->bool(function ($bool) {
+        $bool->must(fn($q) => $q->semantic('semantic_contents', 'Laravel framework'));
+        $bool->filter(fn($q) => $q->term('status', 'published'));
+    })
+    ->execute();
+```
+
 ### Wildcard and Fuzzy Queries
 
 ```php
@@ -343,6 +372,7 @@ dd($query); // Inspect the generated Elasticsearch query
 ## Available Query Types
 
 - **Match Queries**: `match()`, `matchPhrase()`
+- **Semantic Search**: `semantic()`
 - **Term Queries**: `term()`, `terms()`, `exists()`, `wildcard()`, `fuzzy()`
 - **Range Queries**: `range()` with `gt()`, `gte()`, `lt()`, `lte()`
 - **Bool Queries**: `bool()` with `must()`, `should()`, `filter()`, `mustNot()`
