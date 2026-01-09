@@ -240,12 +240,10 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
      */
     public function semantic(string $field, mixed $query, array $options = []): static
     {
-        $semantic = array_merge(['query' => $query], $options);
+        $semantic = array_merge(['field' => $field, 'query' => $query], $options);
 
         $this->addQueryProtected([
-            'semantic' => [
-                $field => $semantic,
-            ],
+            'semantic' => $semantic,
         ]);
 
         return $this;
