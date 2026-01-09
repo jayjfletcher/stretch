@@ -56,6 +56,16 @@ interface QueryBuilderContract
     public function matchPhrase(string $field, mixed $value, array $options = []): static;
 
     /**
+     * Add a semantic query for semantic search using embeddings.
+     *
+     * @param  string  $field  The field to perform semantic search on
+     * @param  mixed  $query  The semantic search query text
+     * @param  array  $options  Additional options (boost, etc.)
+     * @return static Returns the builder instance for method chaining
+     */
+    public function semantic(string $field, mixed $query, array $options = []): static;
+
+    /**
      * Add a term query for exact value matching.
      *
      * @param  string  $field  The field to search (use .keyword for text fields)
