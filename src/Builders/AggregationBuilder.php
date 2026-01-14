@@ -236,6 +236,23 @@ class AggregationBuilder implements AggregationBuilderContract
     }
 
     /**
+     * Create a top hits aggregation to retrieve the top matching documents.
+     *
+     * @param  int  $size  Maximum number of top documents to return (default: 100)
+     * @return static Returns the builder instance for method chaining
+     */
+    public function topHits(int $size = 100): static
+    {
+        $this->aggregation = [
+            'top_hits' => [
+                'size' => $size,
+            ],
+        ];
+
+        return $this;
+    }
+
+    /**
      * Set the maximum number of buckets to return.
      *
      * Only applies to bucket aggregations like terms.

@@ -93,6 +93,15 @@ $results = Stretch::index(['index_1', 'index_2'])
             ->subAggregation('doc_count', fn($sub) => $sub->count())
     )
     ->execute();
+
+// Top hits aggregation with terms (get sample documents per category)
+$results = Stretch::index(['index_1', 'index_2'])
+    ->aggregation('categories', fn($agg) =>
+        $agg->terms('category.keyword')
+            ->size(10)
+            ->subAggregation('top_documents', fn($sub) => $sub->topHits(3))
+    )
+    ->execute();
 ```
 
 ### Sorting and Pagination
@@ -381,7 +390,7 @@ dd($query); // Inspect the generated Elasticsearch query
 ## Available Aggregations
 
 - **Bucket Aggregations**: `terms()`, `dateHistogram()`, `range()`, `histogram()`
-- **Metric Aggregations**: `avg()`, `sum()`, `min()`, `max()`, `count()`, `cardinality()`
+- **Metric Aggregations**: `avg()`, `sum()`, `min()`, `max()`, `count()`, `cardinality()`, `topHits()`
 - **Sub-Aggregations**: `subAggregation()`
 
 ## Configuration Options
