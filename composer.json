@@ -1,6 +1,5 @@
 {
     "name": "jayi/stretch",
-    "version": "dev-main",
     "description": "A Laravel package for building Elasticsearch queries with a fluent, intuitive API",
     "keywords": [
         "laravel",
