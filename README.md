@@ -50,6 +50,11 @@ $results = Stretch::index(['index_1', 'index_2'])
         ->gte('2024-01-01')
         ->lte('2024-12-31')
     ->execute();
+
+// Semantic search
+$results = Stretch::index(['index_1', 'index_2'])
+    ->semantic('semantic_contents', 'What is Laravel?')
+    ->execute();
 ```
 
 ### Bool Queries
@@ -86,6 +91,15 @@ $results = Stretch::index(['index_1', 'index_2'])
         $agg->dateHistogram('created_at', 'month')
             ->subAggregation('avg_score', fn($sub) => $sub->avg('score'))
             ->subAggregation('doc_count', fn($sub) => $sub->count())
+    )
+    ->execute();
+
+// Top hits aggregation with terms (get sample documents per category)
+$results = Stretch::index(['index_1', 'index_2'])
+    ->aggregation('categories', fn($agg) =>
+        $agg->terms('category.keyword')
+            ->size(10)
+            ->subAggregation('top_documents', fn($sub) => $sub->topHits(3))
     )
     ->execute();
 ```
@@ -238,6 +252,30 @@ $results = Stretch::index(['index_1', 'index_2'])
     ->execute();
 ```
 
+### Semantic Search
+
+Stretch supports semantic search using vector embeddings for meaning-based matching (requires Elasticsearch with semantic search capabilities):
+
+```php
+// Simple semantic search
+$results = Stretch::index('documents')
+    ->semantic('semantic_contents', 'What is Laravel?')
+    ->execute();
+
+// Semantic search with boost
+$results = Stretch::index('documents')
+    ->semantic('semantic_contents', 'machine learning', ['boost' => 2.0])
+    ->execute();
+
+// Combine semantic search with filters
+$results = Stretch::index('documents')
+    ->bool(function ($bool) {
+        $bool->must(fn($q) => $q->semantic('semantic_contents', 'Laravel framework'));
+        $bool->filter(fn($q) => $q->term('status', 'published'));
+    })
+    ->execute();
+```
+
 ### Wildcard and Fuzzy Queries
 
 ```php
@@ -343,6 +381,7 @@ dd($query); // Inspect the generated Elasticsearch query
 ## Available Query Types
 
 - **Match Queries**: `match()`, `matchPhrase()`
+- **Semantic Search**: `semantic()`
 - **Term Queries**: `term()`, `terms()`, `exists()`, `wildcard()`, `fuzzy()`
 - **Range Queries**: `range()` with `gt()`, `gte()`, `lt()`, `lte()`
 - **Bool Queries**: `bool()` with `must()`, `should()`, `filter()`, `mustNot()`
@@ -351,7 +390,7 @@ dd($query); // Inspect the generated Elasticsearch query
 ## Available Aggregations
 
 - **Bucket Aggregations**: `terms()`, `dateHistogram()`, `range()`, `histogram()`
-- **Metric Aggregations**: `avg()`, `sum()`, `min()`, `max()`, `count()`, `cardinality()`
+- **Metric Aggregations**: `avg()`, `sum()`, `min()`, `max()`, `count()`, `cardinality()`, `topHits()`
 - **Sub-Aggregations**: `subAggregation()`
 
 ## Configuration Options

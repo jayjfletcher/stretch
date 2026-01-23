@@ -111,3 +111,23 @@ it('can add ordering to terms aggregation', function () {
 
     expect($built['terms']['order']['_count']['order'])->toBe('desc');
 });
+
+it('can create top hits aggregation with default size', function () {
+    $agg = new AggregationBuilder;
+
+    $agg->topHits();
+
+    $built = $agg->build();
+
+    expect($built['top_hits']['size'])->toBe(100);
+});
+
+it('can create top hits aggregation with custom size', function () {
+    $agg = new AggregationBuilder;
+
+    $agg->topHits(50);
+
+    $built = $agg->build();
+
+    expect($built['top_hits']['size'])->toBe(50);
+});

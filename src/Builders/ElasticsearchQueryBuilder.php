@@ -217,6 +217,39 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
     }
 
     /**
+     * Add a semantic query for semantic search using embeddings.
+     *
+     * Performs semantic search using vector embeddings to find documents
+     * with similar meaning rather than exact keyword matches. Requires
+     * Elasticsearch with semantic search capabilities and properly indexed
+     * embedding fields.
+     *
+     * @param  string  $field  The field containing semantic embeddings
+     * @param  mixed  $query  The semantic search query text
+     * @param  array  $options  Additional options (boost, etc.)
+     * @return static Returns the builder instance for method chaining
+     *
+     * @example
+     * ```php
+     * // Simple semantic search
+     * $builder->semantic('semantic_contents', 'Testing something');
+     *
+     * // With boost option
+     * $builder->semantic('semantic_contents', 'testing something', ['boost' => 2.0]);
+     * ```
+     */
+    public function semantic(string $field, mixed $query, array $options = []): static
+    {
+        $semantic = array_merge(['field' => $field, 'query' => $query], $options);
+
+        $this->addQueryProtected([
+            'semantic' => $semantic,
+        ]);
+
+        return $this;
+    }
+
+    /**
      * Add a term query for exact value matching.
      *
      * Finds documents with the exact term in the specified field.
